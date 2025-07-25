@@ -1,14 +1,13 @@
 import { Employee } from '../types';
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { MainLayout } from '../components/Layout/MainLayout';
 import { EmployeeTable } from '../components/Employees/EmployeeTable';
-import EmployeeForm from '../components/Employees/EmployeeForm';
 import { useEmployees } from '../hooks/useEmployees';
 import { Plus, Download, Users, Upload, XCircle } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { saveAs } from 'file-saver';
+import { useNavigate } from 'react-router-dom';
 
-// Helper to safely extract a string from possible object/string
 const getDisplayName = (item: any, nameKey: string = 'name', fallbackKey?: string): string => {
   if (typeof item === 'object' && item?.[nameKey]) return item[nameKey];
   if (typeof item === 'object' && fallbackKey && item?.[fallbackKey]) return item[fallbackKey];
@@ -26,21 +25,17 @@ export const Employees: React.FC = () => {
     refreshEmployees,
   } = useEmployees();
 
-  const [showForm, setShowForm] = useState(false);
-  const [viewOnly, setViewOnly] = useState(false);
-  const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [currentPage, setCurrentPage] = useState(1);
 
-  // NORMALIZE employee data: ensure office_name is always a string
+  const navigate = useNavigate();
+
   const normalizedEmployees = employees.map((emp) => ({
     ...emp,
     office_name: emp.office_name || '',
   }));
 
-  // FILTER LOGIC: Search by name, ID, office, email, salary, status
-  // POSITION and JOINING DATE REMOVED FROM SEARCH
   const filteredEmployees = normalizedEmployees.filter((employee) => {
     const search = searchTerm.trim().toLowerCase();
     const fieldsToSearch = [
@@ -51,7 +46,6 @@ export const Employees: React.FC = () => {
       String(employee.monthlySalary || ''),
       employee.status ? 'Active' : 'Inactive',
     ].map(f => String(f).trim().toLowerCase());
-
     return fieldsToSearch.some(field => field.includes(search));
   });
 
@@ -77,7 +71,6 @@ export const Employees: React.FC = () => {
       alert('No employee data to export.');
       return;
     }
-
     const exportData = filteredEmployees.map((emp) => ({
       'Employee ID': emp.employeeId,
       'Name': emp.name,
@@ -95,17 +88,41 @@ export const Employees: React.FC = () => {
     saveAs(blob, `employees_${new Date().toISOString().split('T')[0]}.xlsx`);
   };
 
+  const handleExportSecondaryData = () => {
+    if (filteredEmployees.length === 0) {
+      alert('No secondary field data to export.');
+      return;
+    }
+    const exportData = filteredEmployees.map(emp => ({
+      'Employee ID': emp.employeeId,
+      'Date of Birth': emp.dob || '',
+      'Passport Number': emp.passport_number || '',
+      'Passport Expiry': emp.passport_expiry || '',
+      'Visa Type': emp.visa_type || '',
+      'Address': emp.address || '',
+      'Phone': emp.phone || '',
+      'Gender': emp.gender || '',
+    }));
+
+    const worksheet = XLSX.utils.json_to_sheet(exportData);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'SecondaryEmployeeData');
+    const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
+    const blob = new Blob([excelBuffer], { type: 'application/octet-stream' });
+    saveAs(blob, `secondary_employee_data_${new Date().toISOString().split('T')[0]}.xlsx`);
+  };
+
   const handleDownloadSampleExcel = () => {
-    const sampleData = [
-      {
-        'Employee ID': 'EMP0021',
-        'Name': 'John Doe',
-        'Email': 'john@example.com',
-        'Office Name': 'Taqniya',
-        'Salary': 2000,
-        'Status': 'active',
-      }
-    ];
+    const sampleData = [{
+      'Employee ID': 'EMP001',
+      'Name': 'John Smith',
+      'Email': 'john@example.com',
+      'Office ID': 1,
+      'Position ID': 2,
+      'Salary': 5000,
+      'Joining Date': '01-01-2023',
+      'Status': 'active'
+    }];
 
     const worksheet = XLSX.utils.json_to_sheet(sampleData);
     const workbook = XLSX.utils.book_new();
@@ -115,66 +132,19 @@ export const Employees: React.FC = () => {
     saveAs(blob, 'sample_employee_import.xlsx');
   };
 
+  // ADD
   const handleAddEmployee = () => {
-    setEditingEmployee({
-      id: 0,
-      employeeId: '',
-      name: '',
-      email: '',
-      office_id: 0,
-      office_name: '',
-      position_id: 0,
-      position_name: '',
-      monthlySalary: 0,
-      joiningDate: new Date().toISOString().split('T')[0],
-      status: true
-    });
-    setViewOnly(false);
-    setShowForm(true);
+    navigate('/employees/add');
   };
 
+  // EDIT
   const handleEditEmployee = (employee: Employee) => {
-    setEditingEmployee({
-      ...employee,
-      office_name: employee.office_name || '',
-    });
-    setViewOnly(false);
-    setShowForm(true);
+    navigate(`/employees/edit/${employee.employeeId}`);
   };
 
+  // VIEW
   const handleViewEmployee = (employee: Employee) => {
-    setEditingEmployee({
-      ...employee,
-      office_name: employee.office_name || '',
-    });
-    setViewOnly(true);
-    setShowForm(true);
-  };
-
-  const handleSubmitEmployee = async (data: any) => {
-    if (!data.office_name || !data.position_name) {
-      alert('Office and Position are required fields');
-      return;
-    }
-    if (!data.employeeId || data.employeeId.trim() === '') {
-      alert('Employee ID is required');
-      return;
-    }
-
-    try {
-      if (editingEmployee && editingEmployee.id !== 0) {
-        await updateEmployee(editingEmployee.employeeId, data);
-      } else {
-        await addEmployee(data);
-      }
-      setShowForm(false);
-      setEditingEmployee(null);
-    } catch (err) {
-      let message = 'Failed to save employee';
-      if (err instanceof Error) message += ': ' + err.message;
-      else message += ': ' + String(err);
-      alert(message);
-    }
+    navigate(`/employees/view/${employee.employeeId}`);
   };
 
   const handleDeleteEmployee = async (id: string) => {
@@ -190,7 +160,6 @@ export const Employees: React.FC = () => {
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-
     const formData = new FormData();
     formData.append('file', file);
 
@@ -216,6 +185,36 @@ export const Employees: React.FC = () => {
       alert(message);
     }
   };
+
+  // --- NEW: SECONDARY DATA IMPORT ---
+  const handleSecondaryFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const formData = new FormData();
+    formData.append('file', file);
+
+    try {
+      const response = await fetch('/api/employees/import-secondary', {
+        method: 'POST',
+        body: formData,
+        headers: { 'Accept': 'application/json' },
+      });
+
+      if (response.ok) {
+        alert('Secondary employee data imported successfully');
+        refreshEmployees();
+      } else {
+        const errorMsg = await response.text();
+        throw new Error(errorMsg || 'Failed to import secondary data');
+      }
+    } catch (err) {
+      let message = 'Import error';
+      if (err instanceof Error) message += ': ' + err.message;
+      else message += ': ' + String(err);
+      alert(message);
+    }
+  };
+  // -----------------------------------
 
   if (loading) {
     return (
@@ -266,11 +265,13 @@ export const Employees: React.FC = () => {
               className="pl-4 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent w-96"
             />
           </div>
-
-          <div className="flex items-center space-x-3">
+          {/* ##### ACTION BUTTON GROUP - STYLED ##### */}
+          <div className="flex items-center gap-2 flex-wrap">
+            {/* Import Excel */}
             <label
               htmlFor="importExcel"
-              className="cursor-pointer flex items-center px-4 py-2 text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg"
+              className="flex items-center h-10 px-5 min-w-[140px] text-base font-medium rounded-lg
+                         bg-indigo-600 text-white hover:bg-indigo-700 cursor-pointer transition-colors duration-150 shadow-sm"
             >
               <Upload className="w-4 h-4 mr-2" />
               Import Excel
@@ -283,30 +284,63 @@ export const Employees: React.FC = () => {
               className="hidden"
             />
 
+            {/* Import Secondary Data */}
+            <label
+              htmlFor="importSecondaryExcel"
+              className="flex items-center h-10 px-5 min-w-[140px] text-base font-medium rounded-lg
+                         bg-purple-600 text-white hover:bg-purple-700 cursor-pointer transition-colors duration-150 shadow-sm"
+            >
+              <Upload className="w-4 h-4 mr-2" />
+              Import Secondary Data
+            </label>
+            <input
+              id="importSecondaryExcel"
+              type="file"
+              accept=".xlsx, .xls"
+              onChange={handleSecondaryFileUpload}
+              className="hidden"
+            />
+
+            {/* Download Sample */}
             <button
               onClick={handleDownloadSampleExcel}
-              className="flex items-center px-4 py-2 text-blue-700 border border-blue-300 bg-blue-50 hover:bg-blue-100 rounded-lg"
+              className="flex items-center h-10 px-5 min-w-[140px] text-base font-medium rounded-lg
+                         text-blue-700 border border-blue-300 bg-blue-50 hover:bg-blue-100 transition-colors duration-150 shadow-sm"
             >
               <Download className="w-4 h-4 mr-2" />
               Sample Excel
             </button>
 
+            {/* Export */}
             <button
               onClick={handleExportToExcel}
-              className="flex items-center px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
+              className="flex items-center h-10 px-5 min-w-[140px] text-base font-medium rounded-lg
+                         text-gray-700 border border-gray-300 bg-white hover:bg-gray-50 transition-colors duration-150 shadow-sm"
             >
               <Download className="w-4 h-4 mr-2" />
               Export
             </button>
 
+            {/* Export Secondary Data */}
+            <button
+              onClick={handleExportSecondaryData}
+              className="flex items-center h-10 px-5 min-w-[140px] text-base font-medium rounded-lg
+                         bg-purple-600 text-white hover:bg-purple-700 transition-colors duration-150 shadow-sm"
+            >
+              Export Secondary Data
+            </button>
+
+            {/* Add New Employee */}
             <button
               onClick={handleAddEmployee}
-              className="flex items-center px-4 py-2 text-white bg-green-600 hover:bg-green-700 rounded-lg"
+              className="flex items-center h-10 px-5 min-w-[140px] text-base font-medium rounded-lg
+                         bg-green-600 text-white hover:bg-green-700 transition-colors duration-150 shadow-sm"
             >
               <Plus className="w-4 h-4 mr-2" />
               Add New Employee
             </button>
           </div>
+          {/* ##### END ACTION BUTTON GROUP ##### */}
         </div>
 
         <div className="flex justify-end">
@@ -340,7 +374,6 @@ export const Employees: React.FC = () => {
             </div>
           </div>
         </div>
-
         {filteredEmployees.length > 0 ? (
           <>
             <EmployeeTable
@@ -387,18 +420,6 @@ export const Employees: React.FC = () => {
               </button>
             )}
           </div>
-        )}
-
-        {showForm && (
-          <EmployeeForm
-            employee={editingEmployee || undefined}
-            viewOnly={viewOnly}
-            onSubmit={handleSubmitEmployee}
-            onClose={() => {
-              setShowForm(false);
-              setEditingEmployee(null);
-            }}
-          />
         )}
       </div>
     </MainLayout>

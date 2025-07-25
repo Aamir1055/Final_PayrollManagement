@@ -1,20 +1,25 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth, LoginCredentials } from './context/AuthContext';
+import { ToastProvider } from './components/UI/ToastContainer';
+import { ErrorBoundary } from './components/ErrorBoundary';
+import { MasterDataProvider } from './context/MasterDataContext';
+import { GlobalMasterData } from './components/GlobalMasterData';
 import { LoginForm } from './components/Auth/LoginForm';
-
-// Page imports
+import AddEmployeePage from './pages/AddEmployee';
 import { Dashboard } from './pages/Dashboard';
 import { Employees } from './pages/Employees';
-import { Payroll } from './pages/Payroll';
-import { Reports } from './pages/Reports';
+import PayrollReports from './pages/PayrollReports';
+import EmployeePayrollDetails from './pages/EmployeePayrollDetails';
 import { Holidays } from './pages/holidays';
 import { Profile } from './pages/Profile';
-import AttendanceUpload from './pages/AttendanceUpload';
+import  AttendanceUpload  from './pages/AttendanceUpload'; // <<--- Import here!
 
-// Protected Route Component
-const ProtectedRoute: React.FC<{ 
-  children: React.ReactNode; 
+import 'react-toastify/dist/ReactToastify.css';
+import { ToastContainer } from 'react-toastify';
+
+const ProtectedRoute: React.FC<{
+  children: React.ReactNode;
   permission?: string;
 }> = ({ children, permission }) => {
   const { isAuthenticated, hasPermission } = useAuth();
@@ -46,28 +51,25 @@ const ProtectedRoute: React.FC<{
   return <>{children}</>;
 };
 
-// Login Form with Authentication Integration
 const AuthenticatedLoginForm: React.FC = () => {
   const { login, loading, error } = useAuth();
 
   const handleLogin = async (credentials: LoginCredentials) => {
     const success = await login(credentials);
     if (success) {
-      // Navigation will be handled by the auth state change
       window.location.href = '/';
     }
   };
 
   return (
-    <LoginForm 
-      onLogin={handleLogin} 
-      loading={loading} 
-      error={error} 
+    <LoginForm
+      onLogin={handleLogin}
+      loading={loading}
+      error={error}
     />
   );
 };
 
-// Main App Routes Component
 const AppRoutes: React.FC = () => {
   const { isAuthenticated } = useAuth();
 
@@ -75,14 +77,6 @@ const AppRoutes: React.FC = () => {
     return (
       <Routes>
         <Route path="/login" element={<AuthenticatedLoginForm />} />
-        {/* --- Attendance is public (no auth required) --- */}
-        <Route
-          path="/attendance"
-          element={
-            <AttendanceUpload onReportNavigate={() => window.location.href = '/reports'} />
-          }
-        />
-        {/* Catch all */}
         <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
     );
@@ -90,60 +84,84 @@ const AppRoutes: React.FC = () => {
 
   return (
     <Routes>
-      <Route 
-        path="/" 
+      <Route
+        path="/"
         element={
           <ProtectedRoute permission="view_dashboard">
             <Dashboard />
           </ProtectedRoute>
-        } 
+        }
       />
-      <Route 
-        path="/employees" 
+      <Route
+        path="/employees"
         element={
           <ProtectedRoute permission="manage_employees">
             <Employees />
           </ProtectedRoute>
-        } 
+        }
       />
-      <Route 
-        path="/payroll" 
+      <Route
+        path="/employees/add"
+        element={
+          <ProtectedRoute permission="manage_employees">
+            <AddEmployeePage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/employees/edit/:employeeId"
+        element={
+          <ProtectedRoute permission="manage_employees">
+            <AddEmployeePage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/employees/view/:employeeId"
+        element={
+          <ProtectedRoute permission="manage_employees">
+            <AddEmployeePage />
+          </ProtectedRoute>
+        }
+      />
+      {/* === ATTENDANCE UPLOAD ROUTE === */}
+      <Route
+      path="/attendance"
+      element={<AttendanceUpload />}
+/>
+
+      {/* === END ATTENDANCE UPLOAD ROUTE === */}
+      <Route
+        path="/payroll"
         element={
           <ProtectedRoute permission="manage_payroll">
-            <Payroll />
+            <PayrollReports />
           </ProtectedRoute>
-        } 
+        }
       />
-      <Route 
-        path="/reports" 
+      <Route
+        path="/employee/:employeeId"
         element={
-          <ProtectedRoute permission="view_reports">
-            <Reports />
+          <ProtectedRoute permission="manage_payroll">
+            <EmployeePayrollDetails />
           </ProtectedRoute>
-        } 
+        }
       />
-      <Route 
-        path="/holidays" 
+      <Route
+        path="/holidays"
         element={
           <ProtectedRoute permission="manage_holidays">
             <Holidays />
           </ProtectedRoute>
-        } 
-      />
-      {/* --- Attendance is public (no auth required) --- */}
-      <Route
-        path="/attendance"
-        element={
-          <AttendanceUpload />
         }
       />
-      <Route 
-        path="/profile" 
+      <Route
+        path="/profile"
         element={
           <ProtectedRoute>
             <Profile />
           </ProtectedRoute>
-        } 
+        }
       />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
@@ -152,13 +170,21 @@ const AppRoutes: React.FC = () => {
 
 const App: React.FC = () => {
   return (
-    <AuthProvider>
-      <Router>
-        <div className="min-h-screen bg-gray-50">
-          <AppRoutes />
-        </div>
-      </Router>
-    </AuthProvider>
+    <ErrorBoundary>
+      <AuthProvider>
+        <ToastProvider>
+          <MasterDataProvider>
+            <Router>
+              <div className="min-h-screen bg-gray-50">
+                <AppRoutes />
+                <GlobalMasterData />
+                <ToastContainer />
+              </div>
+            </Router>
+          </MasterDataProvider>
+        </ToastProvider>
+      </AuthProvider>
+    </ErrorBoundary>
   );
 };
 

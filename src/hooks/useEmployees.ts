@@ -139,10 +139,32 @@ export const useEmployees = () => {
     }
   };
 
+
+const fetchEmployeeById = async (employeeId: string): Promise<Employee | null> => {
+  try {
+    const response = await fetch(`/api/employees/${employeeId}`, {
+      headers: getAuthHeaders(),
+    });
+    if (!response.ok) return null;
+    const data = await response.json();
+    // Normalize like your main fetch:
+    return {
+      ...data,
+      office_name: data.office_name ?? '',
+      position_name: data.position_name ?? data.position_title ?? '',
+      status: data.status === 1 || data.status === true || data.status === 'active'
+    } as Employee;
+  } catch (err) {
+    return null;
+  }
+};
+
+
   return {
     employees,
     loading,
     error,
+    fetchEmployeeById,
     addEmployee,
     updateEmployee,
     deleteEmployee,

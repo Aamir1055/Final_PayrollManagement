@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import { useMasterData } from '../../context/MasterDataContext';
 import { 
   LayoutDashboard, 
   Users, 
@@ -21,7 +22,7 @@ const navigation = [
   { name: 'Dashboard', href: '/', icon: LayoutDashboard },
   { name: 'Employees', href: '/employees', icon: Users },
   { name: 'Payroll', href: '/payroll', icon: DollarSign },
-  { name: 'Reports', href: '/reports', icon: FileText },
+  //{ name: 'Reports', href: '/reports', icon: FileText },
   { name: 'Holidays', href: '/holidays', icon: Calendar },
   { name: 'Profile', href: '/profile', icon: User },
   { name: 'Attendance', href: '/attendance', icon: Calendar },
@@ -30,13 +31,12 @@ const navigation = [
 interface SidebarProps {
   isOpen: boolean;
   onClose: () => void;
-  onAddOffice?: () => void;
-  onAddPosition?: () => void;
 }
 
-export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, onAddOffice, onAddPosition }) => {
+export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
   const [masterDataExpanded, setMasterDataExpanded] = useState(false);
   const { user, logout, hasPermission } = useAuth();
+  const { openOfficeManager, openPositionManager } = useMasterData();
 
   const getRoleDisplay = (role: string) => {
     const roleMap = {
@@ -62,8 +62,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, onAddOffice, 
         return hasPermission('manage_employees');
       case '/payroll':
         return hasPermission('manage_payroll');
-      case '/reports':
-        return hasPermission('view_reports');
+      // case '/reports':
+      //   return hasPermission('view_reports');
       default:
         return true; // Dashboard and Profile are always accessible
     }
@@ -133,25 +133,23 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, onAddOffice, 
                   <div className="ml-4 mt-2 space-y-1">
                     <button
                       onClick={() => {
-                        onAddOffice?.();
+                        openOfficeManager();
                         window.innerWidth < 1024 && onClose();
                       }}
                       className="flex items-center w-full px-4 py-2 text-sm text-gray-600 hover:bg-blue-50 hover:text-blue-600 rounded-md transition-colors duration-200"
                     >
                       <Building2 className="w-4 h-4 mr-3" />
-                      <Plus className="w-3 h-3 mr-2" />
-                      Add Office
+                      Manage Offices
                     </button>
                     <button
                       onClick={() => {
-                        onAddPosition?.();
+                        openPositionManager();
                         window.innerWidth < 1024 && onClose();
                       }}
                       className="flex items-center w-full px-4 py-2 text-sm text-gray-600 hover:bg-blue-50 hover:text-blue-600 rounded-md transition-colors duration-200"
                     >
                       <Briefcase className="w-4 h-4 mr-3" />
-                      <Plus className="w-3 h-3 mr-2" />
-                      Add Position
+                      Manage Positions
                     </button>
                   </div>
                 )}

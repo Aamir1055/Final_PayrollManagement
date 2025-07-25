@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { MainLayout } from '../components/Layout/MainLayout';
-// Using fetch instead of axios
+import { api } from '../utils/api';
 import { Plus, Edit, Trash2 } from 'lucide-react';
 
 interface Office {

@@ -13,6 +13,14 @@ export interface Employee {
   reporting_time?: string;
   duty_hours?: number;
   position_title?: string; // Optional, if not always present
+  dob?: string;
+  passport_number?: string;
+  passport_expiry?: string;
+  visa_type?: string;
+  address?: string;
+  phone?: string;
+  gender?: string;
+  
 }
 
 export interface AttendanceRecord {

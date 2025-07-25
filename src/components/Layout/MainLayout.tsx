@@ -7,16 +7,12 @@ interface MainLayoutProps {
   children: React.ReactNode;
   title: string;
   subtitle?: string;
-  onAddOffice?: () => void;
-  onAddPosition?: () => void;
 }
 
 export const MainLayout: React.FC<MainLayoutProps> = ({ 
   children, 
   title, 
-  subtitle, 
-  onAddOffice, 
-  onAddPosition 
+  subtitle 
 }) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
@@ -25,8 +21,6 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
       <Sidebar 
         isOpen={sidebarOpen} 
         onClose={() => setSidebarOpen(false)} 
-        onAddOffice={onAddOffice}
-        onAddPosition={onAddPosition}
       />
       
       <div className="flex-1 flex flex-col overflow-hidden lg:ml-0">

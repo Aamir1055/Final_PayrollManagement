@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { X, Plus, Edit, Trash2, Building2, Briefcase, Save, XCircle } from 'lucide-react';
-// Using fetch instead of axios
+import { api } from '../../utils/api';
 import { useToast } from '../UI/ToastContainer';
 import { DeleteConfirmModal } from '../UI/DeleteConfirmModal';
 
