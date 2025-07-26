@@ -15,7 +15,8 @@ import {
   ChevronRight,
   Plus,
   User,
-  Settings
+  Settings,
+  Trash2  // ADD THIS ICON
 } from 'lucide-react';
 
 const navigation = [
@@ -26,6 +27,7 @@ const navigation = [
   { name: 'Holidays', href: '/holidays', icon: Calendar },
   { name: 'Profile', href: '/profile', icon: User },
   { name: 'Attendance', href: '/attendance', icon: Calendar },
+  { name: 'Flush DB', href: '/flush-db', icon: Trash2, adminOnly: true }, // ADD THIS LINE
 ];
 
 interface SidebarProps {
@@ -55,6 +57,11 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
 
   // Filter navigation based on permissions
   const filteredNavigation = navigation.filter(item => {
+    // Check if item is admin-only
+    if ((item as any).adminOnly && user?.role !== 'admin') {
+      return false;
+    }
+
     switch (item.href) {
       case '/holidays':
         return hasPermission('manage_holidays');
@@ -62,6 +69,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
         return hasPermission('manage_employees');
       case '/payroll':
         return hasPermission('manage_payroll');
+      case '/flush-db':
+        return user?.role === 'admin'; // Only admin can see Flush DB
       // case '/reports':
       //   return hasPermission('view_reports');
       default:
@@ -102,12 +111,21 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
                     isActive
                       ? 'bg-blue-50 text-blue-600 border-r-2 border-blue-600'
                       : 'text-gray-700 hover:bg-gray-50 hover:text-blue-600'
+                  } ${
+                    // Add red styling for Flush DB
+                    item.href === '/flush-db' 
+                      ? 'hover:bg-red-50 hover:text-red-600' 
+                      : 'hover:bg-gray-50 hover:text-blue-600'
                   }`
                 }
                 onClick={() => window.innerWidth < 1024 && onClose()}
               >
-                <item.icon className="w-5 h-5 mr-3" />
-                {item.name}
+                <item.icon className={`w-5 h-5 mr-3 ${
+                  item.href === '/flush-db' ? 'text-red-500' : ''
+                }`} />
+                <span className={item.href === '/flush-db' ? 'text-red-600 font-semibold' : ''}>
+                  {item.name}
+                </span>
               </NavLink>
             ))}
 
